@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>License Plate Scanner</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
+    video, canvas { width: 90%; max-width: 400px; margin: 10px auto; }
+    #scanButton { padding: 10px 20px; font-size: 18px; }
+  </style>
+</head>
+<body>
+
+<h1>Scan License Plate</h1>
+<video id="video" autoplay></video><br>
+<button id="scanButton">Scan</button>
+<canvas id="canvas" style="display: none;"></canvas>
+<p id="result"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const scanButton = document.getElementById('scanButton');
+const resultText = document.getElementById('result');
+
+// Access the camera
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+  .then(stream => video.srcObject = stream)
+  .catch(err => alert("Camera access failed: " + err));
+
+scanButton.addEventListener('click', async () => {
+  const context = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  resultText.textContent = "Scanning...";
+
+  const { data: { text } } = await Tesseract.recognize(
+    canvas,
+    'eng',
+    { logger: m => console.log(m) }
+  );
+
+  const plate = text.replace(/\s/g, '').toUpperCase();
+  resultText.textContent = "Detected Plate: " + plate;
+
+  // Send to API
+  fetch('https://your-api.com/submit-plate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plate })
+  })
+  .then(res => res.json())
+  .then(data => alert("API Response: " + JSON.stringify(data)))
+  .catch(err => console.error(err));
+});
+</script>
+
+</body>
+</html>
