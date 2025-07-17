@@ -12,7 +12,7 @@
 <body>
 
 <h1>Scan License Plate</h1>
-<video id="video" autoplay></video><br>
+<video id="video" autoplay playsinline></video><br>
 <button id="scanButton">Scan</button>
 <canvas id="canvas" style="display: none;"></canvas>
 <p id="result"></p>
@@ -24,37 +24,54 @@ const canvas = document.getElementById('canvas');
 const scanButton = document.getElementById('scanButton');
 const resultText = document.getElementById('result');
 
-// Access the camera
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-  .then(stream => video.srcObject = stream)
-  .catch(err => alert("Camera access failed: " + err));
+let streamStarted = false;
 
 scanButton.addEventListener('click', async () => {
+  if (!streamStarted) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }
+      });
+      video.srcObject = stream;
+      streamStarted = true;
+      return; // Wait for next click to scan
+    } catch (err) {
+      alert("Camera access failed: " + err);
+      return;
+    }
+  }
+
+  // Capture and scan frame
   const context = canvas.getContext('2d');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  
+
   resultText.textContent = "Scanning...";
 
-  const { data: { text } } = await Tesseract.recognize(
-    canvas,
-    'eng',
-    { logger: m => console.log(m) }
-  );
+  try {
+    const { data: { text } } = await Tesseract.recognize(
+      canvas,
+      'eng',
+      { logger: m => console.log(m) }
+    );
 
-  const plate = text.replace(/\s/g, '').toUpperCase();
-  resultText.textContent = "Detected Plate: " + plate;
+    const plate = text.replace(/\s/g, '').toUpperCase();
+    resultText.textContent = "Detected Plate: " + plate;
 
-  // Send to API
-  fetch('https://your-api.com/submit-plate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ plate })
-  })
-  .then(res => res.json())
-  .then(data => alert("API Response: " + JSON.stringify(data)))
-  .catch(err => console.error(err));
+    // Send to API
+    const response = await fetch('https://your-api.com/submit-plate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plate })
+    });
+
+    const data = await response.json();
+    alert("API Response: " + JSON.stringify(data));
+  } catch (err) {
+    console.error("OCR or API error:", err);
+    resultText.textContent = "Failed to detect plate.";
+  }
 });
 </script>
 
