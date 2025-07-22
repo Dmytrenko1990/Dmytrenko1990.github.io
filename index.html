@@ -48,6 +48,21 @@ scanButton.addEventListener('click', async () => {
   canvas.height = video.videoHeight;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+  // Darken everything except center area
+  const padding = 50;
+  const boxHeight = 80; // Adjust this to match license plate number area
+  const centerY = canvas.height / 2 - boxHeight / 2;
+
+  // Save current image data
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+  // Fill canvas with translucent black
+  context.fillStyle = "rgba(0, 0, 0, 0.7)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Restore only the center strip where plate number is expected
+  context.putImageData(imageData, 0, 0, 0, centerY, canvas.width, boxHeight);
+
   resultInput.value = "Scanning...";
 
   try {
@@ -60,7 +75,7 @@ scanButton.addEventListener('click', async () => {
       }
     );
 
-    const plate = text.replace(/\s/g, '').toUpperCase();
+    const plate = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
     resultInput.value = plate || "No plate detected";
   } catch (err) {
     console.error("OCR error:", err);
@@ -71,3 +86,4 @@ scanButton.addEventListener('click', async () => {
 
 </body>
 </html>
+
