@@ -4,18 +4,71 @@
   <meta charset="UTF-8">
   <title>License Plate Scanner</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin-top: 20px; }
-    video, canvas, input { width: 90%; max-width: 400px; margin: 10px auto; display: block; }
-    #scanButton { padding: 10px 20px; font-size: 18px; }
-    #resultInput { font-size: 18px; padding: 10px; text-align: center; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: #f0f0f0;
+    }
+
+    #container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+    }
+
+    video {
+      width: 90vw;
+      max-width: 400px;
+      border-radius: 8px;
+    }
+
+    #frameOverlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 80%;
+      max-width: 300px;
+      height: 80px; /* Frame height */
+      transform: translate(-50%, -50%);
+      border: 3px dashed red;
+      box-sizing: border-box;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #scanButton {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    #resultInput {
+      font-size: 18px;
+      padding: 10px;
+      margin-top: 10px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    canvas {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
 <h1>Scan License Plate</h1>
-<video id="video" autoplay playsinline></video>
+
+<div id="container">
+  <video id="video" autoplay playsinline></video>
+  <div id="frameOverlay"></div>
+</div>
+
 <button id="scanButton">Scan</button>
-<canvas id="canvas" style="display: none;"></canvas>
+<canvas id="canvas"></canvas>
 <input type="text" id="resultInput" placeholder="Detected Plate Number" readonly />
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -42,26 +95,23 @@ scanButton.addEventListener('click', async () => {
     }
   }
 
-  // Capture frame
   const context = canvas.getContext('2d');
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // Darken everything except center area
-  const padding = 50;
-  const boxHeight = 80; // Adjust this to match license plate number area
-  const centerY = canvas.height / 2 - boxHeight / 2;
+  // Define the frame area to crop
+  const frameWidth = canvas.width * 0.8;
+  const frameHeight = 80; // Must match CSS
+  const frameX = (canvas.width - frameWidth) / 2;
+  const frameY = (canvas.height - frameHeight) / 2;
 
-  // Save current image data
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const frameImageData = context.getImageData(frameX, frameY, frameWidth, frameHeight);
 
-  // Fill canvas with translucent black
-  context.fillStyle = "rgba(0, 0, 0, 0.7)";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Restore only the center strip where plate number is expected
-  context.putImageData(imageData, 0, 0, 0, centerY, canvas.width, boxHeight);
+  // Resize canvas to just the frame area for OCR
+  canvas.width = frameWidth;
+  canvas.height = frameHeight;
+  context.putImageData(frameImageData, 0, 0);
 
   resultInput.value = "Scanning...";
 
@@ -75,19 +125,14 @@ scanButton.addEventListener('click', async () => {
       }
     );
 
-let cleaned = text.toUpperCase();
+    let cleaned = text.toUpperCase();
+    cleaned = cleaned.replace(/MYFLORIDA\.COM/g, '');
+    cleaned = cleaned.replace(/SUNSHINE\s*STATE/g, '');
+    cleaned = cleaned.replace(/[^A-Z0-9]/g, ''); // Remove symbols
+    cleaned = cleaned.replace(/\s+/g, '');
 
-// Remove known Florida plate words
-cleaned = cleaned.replace(/MYFLORIDA\.COM/g, '');
-cleaned = cleaned.replace(/SUNSHINE\s*STATE/g, '');
-cleaned = cleaned.replace(/[^A-Z0-9]/g, ''); // Remove non-alphanumeric
-cleaned = cleaned.replace(/\s+/g, ''); // Remove any extra spaces
-
-// Try to extract a 5–8 character plate number (typical length)
-const match = cleaned.match(/[A-Z0-9]{5,8}/);
-resultInput.value = match ? match[0] : "No plate detected";    
-
-
+    const match = cleaned.match(/[A-Z0-9]{5,8}/);
+    resultInput.value = match ? match[0] : "No plate detected";
   } catch (err) {
     console.error("OCR error:", err);
     resultInput.value = "Failed to detect plate.";
@@ -97,4 +142,3 @@ resultInput.value = match ? match[0] : "No plate detected";
 
 </body>
 </html>
-
