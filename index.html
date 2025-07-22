@@ -75,8 +75,19 @@ scanButton.addEventListener('click', async () => {
       }
     );
 
-    const plate = text.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    resultInput.value = plate || "No plate detected";
+let cleaned = text.toUpperCase();
+
+// Remove known Florida plate words
+cleaned = cleaned.replace(/MYFLORIDA\.COM/g, '');
+cleaned = cleaned.replace(/SUNSHINE\s*STATE/g, '');
+cleaned = cleaned.replace(/[^A-Z0-9]/g, ''); // Remove non-alphanumeric
+cleaned = cleaned.replace(/\s+/g, ''); // Remove any extra spaces
+
+// Try to extract a 5–8 character plate number (typical length)
+const match = cleaned.match(/[A-Z0-9]{5,8}/);
+resultInput.value = match ? match[0] : "No plate detected";    
+
+
   } catch (err) {
     console.error("OCR error:", err);
     resultInput.value = "Failed to detect plate.";
