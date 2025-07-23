@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>License Plate Scanner</title>
+  <title>Improved License Plate Scanner</title>
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
+      background: #f0f0f0;
       margin: 0;
       padding: 0;
-      background: #f0f0f0;
     }
 
     #container {
@@ -30,7 +30,7 @@
       left: 50%;
       width: 80%;
       max-width: 300px;
-      height: 80px; /* Frame height */
+      height: 80px;
       transform: translate(-50%, -50%);
       border: 3px dashed red;
       box-sizing: border-box;
@@ -72,9 +72,7 @@
 <input type="text" id="resultInput" placeholder="Detected Plate Number" readonly />
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
 <script>
-
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const scanButton = document.getElementById('scanButton');
@@ -86,7 +84,11 @@ scanButton.addEventListener('click', async () => {
   if (!streamStarted) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } }
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
       video.srcObject = stream;
       streamStarted = true;
@@ -102,18 +104,25 @@ scanButton.addEventListener('click', async () => {
   canvas.height = video.videoHeight;
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // Define the frame area to crop
+  // Crop to center frame area
   const frameWidth = canvas.width * 0.8;
   const frameHeight = 80;
   const frameX = (canvas.width - frameWidth) / 2;
   const frameY = (canvas.height - frameHeight) / 2;
-
   const frameImageData = context.getImageData(frameX, frameY, frameWidth, frameHeight);
 
   // Resize canvas to just the frame area
   canvas.width = frameWidth;
   canvas.height = frameHeight;
   context.putImageData(frameImageData, 0, 0);
+
+  // Grayscale preprocessing
+  let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
+    imageData.data[i] = imageData.data[i+1] = imageData.data[i+2] = avg;
+  }
+  context.putImageData(imageData, 0, 0);
 
   resultInput.value = "Scanning...";
 
@@ -123,11 +132,12 @@ scanButton.addEventListener('click', async () => {
       'eng',
       {
         logger: m => console.log(m),
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+        oem: 1, // Use LSTM OCR engine
+        tessedit_pageseg_mode: 7 // Treat as a single line of text
       }
     );
 
-    // Just display raw OCR result
     resultInput.value = text.trim() || "No plate detected";
   } catch (err) {
     console.error("OCR error:", err);
