@@ -73,6 +73,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script>
+<script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const scanButton = document.getElementById('scanButton');
@@ -102,13 +103,13 @@ scanButton.addEventListener('click', async () => {
 
   // Define the frame area to crop
   const frameWidth = canvas.width * 0.8;
-  const frameHeight = 80; // Must match CSS
+  const frameHeight = 80;
   const frameX = (canvas.width - frameWidth) / 2;
   const frameY = (canvas.height - frameHeight) / 2;
 
   const frameImageData = context.getImageData(frameX, frameY, frameWidth, frameHeight);
 
-  // Resize canvas to just the frame area for OCR
+  // Resize canvas to just the frame area
   canvas.width = frameWidth;
   canvas.height = frameHeight;
   context.putImageData(frameImageData, 0, 0);
@@ -125,14 +126,8 @@ scanButton.addEventListener('click', async () => {
       }
     );
 
-    let cleaned = text.toUpperCase();
-    cleaned = cleaned.replace(/MYFLORIDA\.COM/g, '');
-    cleaned = cleaned.replace(/SUNSHINE\s*STATE/g, '');
-    cleaned = cleaned.replace(/[^A-Z0-9]/g, ''); // Remove symbols
-    cleaned = cleaned.replace(/\s+/g, '');
-
-    const match = cleaned.match(/[A-Z0-9]{5,8}/);
-    resultInput.value = match ? match[0] : "No plate detected";
+    // Just display raw OCR result
+    resultInput.value = text.trim() || "No plate detected";
   } catch (err) {
     console.error("OCR error:", err);
     resultInput.value = "Failed to detect plate.";
