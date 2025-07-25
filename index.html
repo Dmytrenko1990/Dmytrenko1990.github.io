@@ -116,20 +116,18 @@ scanButton.addEventListener('click', async () => {
   canvas.height = frameHeight;
   context.putImageData(frameImageData, 0, 0);
 
-  // Grayscale preprocessing
+  // Black and white thresholding
+  const threshold = 140; // adjust between 100-180 if needed
   let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-const threshold = 140; // Tune this value if needed (e.g., 120–160 range)
-
-for (let i = 0; i < imageData.data.length; i += 4) {
-  const r = imageData.data[i];
-  const g = imageData.data[i + 1];
-  const b = imageData.data[i + 2];
-  const avg = (r + g + b) / 3;
-
-  const value = avg < threshold ? 0 : 255;
-  imageData.data[i] = value;     // R
-  imageData.data[i + 1] = value; // G
-  imageData.data[i + 2] = value; // B
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const r = imageData.data[i];
+    const g = imageData.data[i + 1];
+    const b = imageData.data[i + 2];
+    const avg = (r + g + b) / 3;
+    const value = avg < threshold ? 0 : 255;
+    imageData.data[i] = value;     // R
+    imageData.data[i + 1] = value; // G
+    imageData.data[i + 2] = value; // B
   }
   context.putImageData(imageData, 0, 0);
 
@@ -141,9 +139,10 @@ for (let i = 0; i < imageData.data.length; i += 4) {
       'eng',
       {
         logger: m => console.log(m),
+        // Options below are hints only; Tesseract.js may ignore them depending on version
         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-        oem: 1, // Use LSTM OCR engine
-        tessedit_pageseg_mode: 7 // Treat as a single line of text
+        oem: 1,
+        tessedit_pageseg_mode: 7
       }
     );
 
