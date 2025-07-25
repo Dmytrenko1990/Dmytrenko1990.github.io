@@ -118,9 +118,18 @@ scanButton.addEventListener('click', async () => {
 
   // Grayscale preprocessing
   let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  for (let i = 0; i < imageData.data.length; i += 4) {
-    const avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
-    imageData.data[i] = imageData.data[i+1] = imageData.data[i+2] = avg;
+const threshold = 140; // Tune this value if needed (e.g., 120–160 range)
+
+for (let i = 0; i < imageData.data.length; i += 4) {
+  const r = imageData.data[i];
+  const g = imageData.data[i + 1];
+  const b = imageData.data[i + 2];
+  const avg = (r + g + b) / 3;
+
+  const value = avg < threshold ? 0 : 255;
+  imageData.data[i] = value;     // R
+  imageData.data[i + 1] = value; // G
+  imageData.data[i + 2] = value; // B
   }
   context.putImageData(imageData, 0, 0);
 
